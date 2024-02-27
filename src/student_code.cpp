@@ -16,7 +16,16 @@ namespace CGL
   std::vector<Vector2D> BezierCurve::evaluateStep(std::vector<Vector2D> const &points)
   { 
     // TODO Part 1.
-    return std::vector<Vector2D>();
+    //interate through points and lerp between them
+    std::vector<Vector2D> newPoints;
+    //base case
+    if (points.size() == 1) {
+      return points;
+    }
+    for (int i = 0; i < points.size() - 1; i++) {
+      newPoints.push_back((1 - t) * points[i] + t * points[i + 1]);
+    }
+    return newPoints;
   }
 
   /**
@@ -30,7 +39,15 @@ namespace CGL
   std::vector<Vector3D> BezierPatch::evaluateStep(std::vector<Vector3D> const &points, double t) const
   {
     // TODO Part 2.
-    return std::vector<Vector3D>();
+    //same for 3D
+    std::vector<Vector3D> newPoints;
+    if (points.size() == 1) {
+      return points;
+    }
+    for (int i = 0; i < points.size() - 1; i++) {
+      newPoints.push_back((1 - t) * points[i] + t * points[i + 1]);
+    }
+    return newPoints;
   }
 
   /**
@@ -43,7 +60,11 @@ namespace CGL
   Vector3D BezierPatch::evaluate1D(std::vector<Vector3D> const &points, double t) const
   {
     // TODO Part 2.
-    return Vector3D();
+    //base case
+    if(points.size() == 1) {
+      return points[0];
+    }
+    return evaluate1D(evaluateStep(points, t), t);
   }
 
   /**
@@ -56,7 +77,15 @@ namespace CGL
   Vector3D BezierPatch::evaluate(double u, double v) const 
   {  
     // TODO Part 2.
-    return Vector3D();
+    //get size of outer loop
+    int n = controlPoints.size();
+
+    //create vector of points
+    std::vector<Vector3D> points;
+    for (int i = 0; i < n; i++) {
+      points.push_back(evaluate1D(controlPoints[i], u));
+    }
+    return evaluate1D(points, v);
   }
 
   Vector3D Vertex::normal( void ) const
@@ -65,7 +94,24 @@ namespace CGL
     // Returns an approximate unit normal at this vertex, computed by
     // taking the area-weighted average of the normals of neighboring
     // triangles, then normalizing.
-    return Vector3D();
+    Vector3D result = Vector3D(0, 0, 0);
+    HalfedgeCIter h = halfedge();
+    //iterate through all halfedges and get area and normal using points
+    do {
+      if (h->face()->isBoundary()) {
+        h = h->twin()->next();
+        continue;
+      }
+      Vector3D p0 = position;
+      Vector3D p1 = h->next()->vertex()->position;
+      Vector3D p2 = h->next()->next()->vertex()->position;
+      Vector3D normal = cross(p1 - p0, p2 - p0);
+      //weight it by area
+      double area = normal.norm()/2;
+      result += area * normal;
+      h = h->twin()->next();
+    } while (h != halfedge());
+    return result.unit();
   }
 
   EdgeIter HalfedgeMesh::flipEdge( EdgeIter e0 )
